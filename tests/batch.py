@@ -6,10 +6,23 @@ import pickle
 import pandas as pd
 
 
-def read_data(filename, categorical):
-    df = pd.read_parquet(filename)
+def read_data(file, categorical):
+    if isinstance(file, pd.DataFrame):
+        df = file # Return an empty DataFrame on error
+    elif isinstance(file, str) and file.endswith(".parquet"):
+        try:
+            df = pd.read_parquet(file)
+        except Exception as e:
+            print(f"Error reading Parquet file {file}: {e}")
+            df = pd.DataFrame()  # Return an empty DataFrame on error
+    else:
+        try:
+            df = pd.DataFrame(file)  # Attempt to create a DataFrame from file
+        except Exception as e:
+            print(f"Error creating DataFrame from {file}: {e}")
+            df = pd.DataFrame()  # Return an empty DataFrame on error
     
-    df['duration'] = df.tpep_dropoff_datetime - df.tpep_pickup_datetime
+    df['duration'] = df['tpep_dropoff_datetime'] - df['tpep_pickup_datetime']
     df['duration'] = df.duration.dt.total_seconds() / 60
 
     df = df[(df.duration >= 1) & (df.duration <= 60)].copy()
@@ -54,5 +67,3 @@ if __name__ == "__main__":
         year = int(sys.argv[1])
         month = int(sys.argv[2])
         main(year, month)
-    # else:
-    #     app.run(debug=True, host='0.0.0.0', port=9696)
