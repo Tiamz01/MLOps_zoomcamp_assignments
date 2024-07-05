@@ -40,8 +40,6 @@ def prepare_data():
     expected_df = pd.DataFrame(expected_data, columns=expected_columns)
     
     
-    # pd.testing.assert_frame_equal(actual_df.reset_index(drop=True), expected_df)
-    
     assert actual_df.shape == expected_df.shape
     print(f'actual_df.shape:{actual_df.shape}')
     print(f'expected_df.shape:{expected_df.shape}')
