@@ -6,18 +6,28 @@ import pickle
 import pandas as pd
 
 
+
+
 def read_data(file, categorical):
+    options = {
+        'client_kwargs': {
+            'endpoint_url': 'http://localhost:4566'  # Adjust based on your S3 endpoint
+        }
+    }
+    
     if isinstance(file, pd.DataFrame):
-        df = file # Return an empty DataFrame on error
+        df = file.copy()  # Use a copy to avoid modifying the original DataFrame
     elif isinstance(file, str) and file.endswith(".parquet"):
         try:
-            df = pd.read_parquet(file)
+            # Read Parquet file from S3
+            df = pd.read_parquet(f's3://bucket/{file}', storage_options=options)
         except Exception as e:
-            print(f"Error reading Parquet file {file}: {e}")
+            print(f"Error reading Parquet file {file} from S3: {e}")
             df = pd.DataFrame()  # Return an empty DataFrame on error
     else:
         try:
-            df = pd.DataFrame(file)  # Attempt to create a DataFrame from file
+            # Attempt to create a DataFrame from other types of input
+            df = pd.DataFrame(file)
         except Exception as e:
             print(f"Error creating DataFrame from {file}: {e}")
             df = pd.DataFrame()  # Return an empty DataFrame on error
@@ -31,10 +41,21 @@ def read_data(file, categorical):
     
     return df
 
+def get_input_path(year, month):
+    default_input_pattern = 'https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_{year:04d}-{month:02d}.parquet'
+    input_pattern = os.getenv('INPUT_FILE_PATTERN', default_input_pattern)
+    return input_pattern.format(year=year, month=month)
+
+
+def get_output_path(year, month):
+    default_output_pattern = 's3://nyc-duration-prediction-alexey/taxi_type=fhv/year={year:04d}/month={month:02d}/predictions.parquet'
+    output_pattern = os.getenv('OUTPUT_FILE_PATTERN', default_output_pattern)
+    return output_pattern.format(year=year, month=month)
+
 
 def main(year, month):
-    input_file = f'https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_{year:04d}-{month:02d}.parquet'
-    output_file = f'output/yellow_tripdata_{year:04d}-{month:02d}.parquet'
+    input_file = get_input_path(year, month)
+    output_file = get_output_path(year, month)
     categorical = ['PULocationID', 'DOLocationID']
 
     with open('model.bin', 'rb') as f_in:
